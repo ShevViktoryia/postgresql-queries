@@ -42,27 +42,33 @@ WHERE i.inventory_id IS NULL;
 
 -- 5. Display the top 3 actors who appeared the most in films within the "Children" category (include ties)
 WITH actor_counts AS (
-    SELECT a.actor_id, 
-    a.first_name, 
-    a.last_name, 
-    COUNT(*) AS film_count
+    SELECT 
+        a.actor_id,
+        a.first_name,
+        a.last_name,
+        COUNT(*) AS film_count
     FROM actor a
-    LEFT JOIN film_actor fa ON a.actor_id = fa.actor_id
-    LEFT JOIN film_category fc ON fa.film_id = fc.film_id
-    LEFT JOIN category c ON fc.category_id = c.category_id
+    JOIN film_actor fa ON a.actor_id = fa.actor_id
+    JOIN film_category fc ON fa.film_id = fc.film_id
+    JOIN category c ON fc.category_id = c.category_id
     WHERE c.name = 'Children'
     GROUP BY a.actor_id, a.first_name, a.last_name
+),
+ranked AS (
+    SELECT 
+        actor_id,
+        first_name,
+        last_name,
+        film_count,
+        DENSE_RANK() OVER (ORDER BY film_count DESC) AS rnk
+    FROM actor_counts
 )
 SELECT actor_id, 
-first_name, 
-last_name, 
-film_count
-FROM actor_counts
-WHERE film_count >= (
-    SELECT film_count FROM actor_counts
-    ORDER BY film_count DESC
-    OFFSET 2 LIMIT 1
-)
+       first_name, 
+       last_name, 
+       film_count
+FROM ranked
+WHERE rnk <= 3
 ORDER BY film_count DESC;
 
 -- 6. Display cities with the count of active and inactive customers (sort by inactive DESC)
